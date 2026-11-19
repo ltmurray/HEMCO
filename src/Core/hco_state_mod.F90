@@ -73,6 +73,11 @@ MODULE HCO_State_Mod
                                                ! 3D array.  Emissions will be
                                                ! written into this array if
                                                ! option FillBuffer = .TRUE.
+     REAL(hp), ALLOCATABLE       :: CategoryFlux(:,:,:,:)
+                                               ! Optional current-timestep
+                                               ! fluxes by emission category
+     INTEGER                     :: CategoryFluxHcoID = -1
+                                               ! Species captured above
 
      !%%%%% Constants and timesteps %%%%%
      TYPE(HcoPhys),      POINTER :: Phys       ! Physical constants
@@ -557,6 +562,10 @@ CONTAINS
 
     ! Deallocate buffer array
     CALL HCO_ArrCleanup ( HcoState%Buffer3D )
+    IF ( ALLOCATED(HcoState%CategoryFlux) ) THEN
+       DEALLOCATE(HcoState%CategoryFlux)
+    ENDIF
+    HcoState%CategoryFluxHcoID = -1
 
     ! Deallocate all species arrays
     IF ( ASSOCIATED ( HcoState%Spc ) .and. HcoState%nSpc > 0 ) THEN

@@ -144,6 +144,7 @@ CONTAINS
 ! !INPUT PARAMETERS:
 !
     LOGICAL,         INTENT(IN   )  :: UseConc    ! Use concentration fields?
+
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -245,6 +246,12 @@ CONTAINS
     CatMax  = HcoState%Options%CatMax        !Upper emission category
     ExtNr   = HcoState%Options%ExtNr         !Extension number
     DoDiagn = HcoState%Options%AutoFillDiagn !Write AutoFill diagnostics?
+
+    ! Reset optional current-timestep category capture before assembling
+    ! base emissions for its requested species.
+    IF ( ALLOCATED(HcoState%CategoryFlux) .AND. ExtNr == 0 ) THEN
+       HcoState%CategoryFlux = 0.0_hp
+    ENDIF
 
     ! Verbose mode
     IF ( HcoState%Config%doVerbose ) THEN
@@ -389,6 +396,17 @@ CONTAINS
           ! CatFlx holds the emissions for this category. Pass this to
           ! the species array SpcFlx.
           SpcFlx(:,:,:) = SpcFlx(:,:,:) + CatFlx(:,:,:)
+
+          ! Optionally retain current-timestep category fluxes during the
+          ! normal base-emissions pass.  Extensions can then use them without
+          ! rebuilding the emissions list category by category.
+          IF ( ALLOCATED(HcoState%CategoryFlux) ) THEN
+             IF ( ExtNr == 0 .AND.                                  &
+                  PrevSpc == HcoState%CategoryFluxHcoID .AND.        &
+                  PrevCat <= SIZE(HcoState%CategoryFlux,4) ) THEN
+                HcoState%CategoryFlux(:,:,:,PrevCat) = CatFlx(:,:,:)
+             ENDIF
+          ENDIF
 
           ! verbose
           IF ( HcoState%Config%doVerbose ) THEN

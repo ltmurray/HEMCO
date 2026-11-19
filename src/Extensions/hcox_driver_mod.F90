@@ -106,6 +106,7 @@ CONTAINS
     USE HCOX_MEGAN_Mod,         ONLY : HCOX_MEGAN_Init
     USE HCOX_Finn_Mod,          ONLY : HCOX_FINN_Init
     USE HCOX_GFAS_Mod,          ONLY : HCOX_GFAS_Init
+    USE HCOX_CH4_Isotopologues_Mod,  ONLY : HCOX_CH4_Isotopologues_Init
     USE HCOX_GC_RnPbBe_Mod,     ONLY : HCOX_GC_RnPbBe_Init
     USE HCOX_GC_POPs_Mod,       ONLY : HCOX_GC_POPs_Init
     USE HCOX_Volcano_Mod,       ONLY : HCOX_Volcano_Init
@@ -304,6 +305,16 @@ CONTAINS
        ENDIF
 
        !--------------------------------------------------------------------
+       ! Stable methane isotopologue emissions
+       !--------------------------------------------------------------------
+       CALL HCOX_CH4_Isotopologues_Init( HcoState, 'CH4_Isotopologues', ExtState, RC )
+       IF ( RC /= HCO_SUCCESS ) THEN
+          ErrMsg = 'Error encountered in "HCOX_CH4_Isotopologues_Init"!'
+          CALL HCO_ERROR( ErrMsg, RC, ThisLoc )
+          RETURN
+       ENDIF
+
+       !--------------------------------------------------------------------
        ! Extension for GEOS-Chem Rn-Pb-Be specialty simulation
        !--------------------------------------------------------------------
        CALL HCOX_GC_RnPbBe_Init( HcoState, 'GC_Rn-Pb-Be', ExtState,  RC )
@@ -424,6 +435,7 @@ CONTAINS
     USE HCOX_GFED_Mod,          ONLY : HCOX_GFED_Run
     USE HCOX_FINN_Mod,          ONLY : HCOX_FINN_Run
     USE HCOX_GFAS_Mod,          ONLY : HCOX_GFAS_Run
+    USE HCOX_CH4_Isotopologues_Mod,  ONLY : HCOX_CH4_Isotopologues_Run
     USE HCOX_GC_RnPbBe_Mod,     ONLY : HCOX_GC_RnPbBe_Run
     USE HCOX_GC_POPs_Mod,       ONLY : HCOX_GC_POPs_Run
     USE HCOX_Volcano_Mod,       ONLY : HCOX_Volcano_Run
@@ -713,6 +725,17 @@ CONTAINS
        ! Add extensions here ...
        !--------------------------------------------------------------------
 
+       ! Run after all other emission extensions so that the isotopologue
+       ! partition includes the complete assembled CH4 source.
+       IF ( ExtState%CH4_Isotopologues > 0 ) THEN
+          CALL HCOX_CH4_Isotopologues_Run( ExtState, HcoState, RC )
+          IF ( RC /= HCO_SUCCESS ) THEN
+             ErrMsg = 'Error encountered in "HCOX_CH4_Isotopologues_Run"!'
+             CALL HCO_ERROR( ErrMsg, RC, ThisLoc )
+             RETURN
+          ENDIF
+       ENDIF
+
        !====================================================================
        ! Fill diagnostics
        !
@@ -767,6 +790,7 @@ CONTAINS
     USE HCOX_GFED_Mod,          ONLY : HCOX_GFED_Final
     USE HCOX_FINN_Mod,          ONLY : HCOX_FINN_Final
     USE HCOX_GFAS_Mod,          ONLY : HCOX_GFAS_Final
+    USE HCOX_CH4_Isotopologues_Mod,  ONLY : HCOX_CH4_Isotopologues_Final
     USE HCOX_GC_RnPbBe_Mod,     ONLY : HCOX_GC_RnPbBe_Final
     USE HCOX_GC_POPs_Mod,       ONLY : HCOX_GC_POPs_Final
     USE HCOX_Volcano_Mod,       ONLY : HCOX_Volcano_Final
@@ -853,6 +877,10 @@ CONTAINS
 
           IF ( ExtState%GFAS > 0      ) THEN
              CALL HCOX_GFAS_Final( ExtState )
+          ENDIF
+
+          IF ( ExtState%CH4_Isotopologues > 0 ) THEN
+             CALL HCOX_CH4_Isotopologues_Final( ExtState )
           ENDIF
 
           IF ( ExtState%GC_RnPbBe > 0 ) THEN
